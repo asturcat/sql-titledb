@@ -35,7 +35,8 @@ jobs:
           DefaultSettings__BaseUrl: https://raw.githubusercontent.com/borntohonk/titledb/master/
         run: |
           mkdir -p /tmp/titledb_work
-          dotnet run --project /tmp/titledbConverter/src/titledbConverter/titledbConverter.csproj --configuration Release -- freshdb /tmp/titledb_work -d
+          cd /tmp/titledbConverter/src/titledbConverter
+          dotnet run --configuration Release -- freshdb /tmp/titledb_work -d
           test -s /tmp/titledb_work/titledb.db
 
       - name: Compress database and generate MD5 version

@@ -1,0 +1,58 @@
+name: Update TitleDB from borntohonk/titledb
+
+on:
+  schedule:
+    - cron: '0 21 * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/update-titledb.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build-titledb:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Clone ivaano/titledbConverter
+        run: git clone --depth 1 https://github.com/ivaano/titledbConverter.git /tmp/titledbConverter
+
+      - name: Build titledb.db from borntohonk/titledb
+        env:
+          ConnectionStrings__SqliteConnection: Data Source=/tmp/titledb_work/titledb.db
+          DefaultSettings__DownloadPath: /tmp/titledb_work
+          DefaultSettings__BaseUrl: https://raw.githubusercontent.com/borntohonk/titledb/master/
+        run: |
+          mkdir -p /tmp/titledb_work
+          dotnet run --project /tmp/titledbConverter/src/titledbConverter/titledbConverter.csproj --configuration Release -- freshdb /tmp/titledb_work -d
+          test -s /tmp/titledb_work/titledb.db
+
+      - name: Compress database and generate MD5 version
+        run: |
+          gzip -9 -c /tmp/titledb_work/titledb.db > titledb.db.gz
+          md5sum titledb.db.gz | awk '{print $1}' > version
+          ls -lh titledb.db.gz version
+          cat version
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add titledb.db.gz version
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "Update titledb.db from borntohonk/titledb ($(date -u +'%Y-%m-%d %H:%M UTC'))"
+            git push
+          else
+            echo "No changes to titledb.db.gz or version."
+          fi

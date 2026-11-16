@@ -53,6 +53,7 @@ jobs:
           git add titledb.db.gz version
           if [ -n "$(git status --porcelain)" ]; then
             git commit -m "Update titledb.db from borntohonk/titledb ($(date -u +'%Y-%m-%d %H:%M UTC'))"
+            git pull --rebase origin main
             git push
           else
             echo "No changes to titledb.db.gz or version."
